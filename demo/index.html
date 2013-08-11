@@ -76,7 +76,11 @@ branch.read('META-INF/container.xml')</pre>
         // Start the prompt with history enabled.
         jqconsole.Prompt(true, function (input) {
           // Output input with the class jqconsole-output.
-          var ret = eval(input);
+          try {
+            var ret = eval(input);
+          } catch (e) {
+            jqconsole.Write(JSON.stringify(e.message) + '\n', 'jqconsole-error');
+          }
           if (ret && ret.promise) {
             ret
             .fail(function(json) {
