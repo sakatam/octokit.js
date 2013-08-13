@@ -767,7 +767,7 @@ if (!injected) {
   sandbox.write('<script>(function () { var fakeConsole = ' + fakeConsole + '; if (console != undefined) { for (var k in fakeConsole) { console[k] = fakeConsole[k]; } } else { console = fakeConsole; } })();</script>');
 
   //PHIL: Add libs
-  sandbox.write('<script src="../bower_components/jquery/jquery.js"></script>');
+  sandbox.write('<script src="../bower_components/jquery/jquery.min.js"></script>');
   sandbox.write('<script src="../bower_components/lodash/lodash.js"></script>');
   sandbox.write('<script src="../octokit.js"></script>');
 
