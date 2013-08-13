@@ -9,6 +9,7 @@
     "lodash": ">=1.0"
   },
   "devDependencies": {
+    "jq-console": "replit/jq-console",
     "coffee-script": ">=1.3"
   }
 }

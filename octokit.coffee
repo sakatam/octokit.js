@@ -174,6 +174,20 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
         # Return the promise
         return promise.promise()
 
+
+      # Converts a dictionary to a query string.
+      # Internal helper method
+      toQueryString = (options) ->
+
+        # Returns '' if `options` is empty so this string can always be appended to a URL
+        return '' if _.isEmpty(options)
+
+        params = []
+        _.each _.pairs(options), ([key, value]) ->
+          params.push "#{key}=#{encodeURIComponent(value)}"
+        return "?#{params.join('&')}"
+
+
       # Add a listener that fires when the `rateLimitRemaining` changes as a result of
       # communicating with github.
       @onRateLimitChanged = (listener) ->
@@ -194,8 +208,8 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
 
       # List public repositories for an Organization
       # -------
-      @getOrgRepos = (orgName) ->
-        _request 'GET', "/orgs/#{orgName}/repos?type=all&per_page=1000&sort=updated&direction=desc", null
+      @getOrgRepos = (orgName, type='all') ->
+        _request 'GET', "/orgs/#{orgName}/repos?type=#{type}&per_page=1000&sort=updated&direction=desc", null
 
       # Get public Gists on all of GitHub
       # -------
@@ -229,7 +243,9 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
           return time
 
         options.since = getDate(options.since) if options.since
-        _request 'GET', '/notifications', options
+
+        queryString = toQueryString(options)
+        _request 'GET', "/notifications#{queryString}", null
 
 
       # Github Users API
@@ -588,13 +604,7 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
           # -------
           # Optionally set recursive to true
           @getTree = (tree, options=null) ->
-            queryString = ''
-            if not _.isEmpty(options)
-              params = []
-              _.each _.pairs(options), ([key, value]) ->
-                params.push "#{key}=#{encodeURIComponent(value)}"
-              queryString = "?#{params.join('&')}"
-
+            queryString = toQueryString(options)
             _request('GET', "#{_repoPath}/git/trees/#{tree}#{queryString}", null)
             .then (res) =>
               return res.tree
@@ -700,12 +710,7 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
             options.since = getDate(options.since) if options.since
             options.until = getDate(options.until) if options.until
 
-            queryString = ''
-            if not _.isEmpty(options)
-              params = []
-              _.each _.pairs(options), ([key, value]) ->
-                params.push "#{key}=#{encodeURIComponent(value)}"
-              queryString = "?#{params.join('&')}"
+            queryString = toQueryString(options)
 
             _request('GET', "#{_repoPath}/commits#{queryString}", null)
             # Return the promise
@@ -944,7 +949,10 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
               return time
 
             options.since = getDate(options.since) if options.since
-            _request 'GET', "#{@repoPath}/notifications", options
+
+            queryString = toQueryString(options)
+
+            _request 'GET', "#{@repoPath}/notifications#{queryString}", null
 
           # List Collaborators
           # -------
@@ -1042,6 +1050,11 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
           # -------
           @deleteHook = (id) ->
             _request 'DELETE', "#{@repoPath}/hooks/#{id}", null
+
+          # List all Languages
+          # -------
+          @getLanguages = ->
+            _request 'GET', "#{@repoPath}/languages", null
 
 
       # Gist API
@@ -1202,7 +1215,11 @@ else if @_ and @jQuery and (@btoa or @Base64)
   # Use the `btoa` function if it is defined (Webkit/Mozilla) and fail back to
   # `Base64.encode` otherwise (IE)
   encode = @btoa or @Base64.encode
-  @Octokit = makeOctokit @_, @jQuery, encode
+  Octokit = makeOctokit @_, @jQuery, encode
+  # Assign to `Octokit` and `Github` global for backwards compatibility
+  @Octokit ?= Octokit
+  @Github ?= Octokit
+
 
 # Otherwise, throw an error
 else
