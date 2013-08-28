@@ -6,7 +6,7 @@ AngularJS Git Commit Message Conventions
 
 Goals
 =======
-- allow generating CHANGELOG.md by script
+- allow generating `CHANGELOG.md` by script
 - allow ignoring commits by git bisect (not important commits like formatting)
 - provide better information when browsing the history
 
@@ -73,22 +73,22 @@ Subject line
 -------
 Subject line contains succinct description of the change.
 
-Allowed <type>
+Allowed `<type>`
 -------
 
-- feat (feature)
-- fix (bug fix)
-- docs (documentation)
-- style (formatting, missing semi colons, …)
-- refactor
-- test (when adding missing tests)
-- chore (maintain)
+- `feat` (feature)
+- `fix` (bug fix)
+- `docs` (documentation)
+- `style` (formatting, missing semi colons, …)
+- `refactor`
+- `test` (when adding missing tests)
+- `chore` (maintain)
 
-Allowed <scope>
+Allowed `<scope>`
 -------
 Scope could be anything specifying place of the commit change. For example $location, $browser, $compile, $rootScope, ngHref, ngClick, ngView, etc...
 
-<subject> text
+`<subject>` text
 -------
 
 - use imperative, present tense: “change” not “changed” nor “changes”
@@ -104,10 +104,7 @@ Message body
 http://365git.tumblr.com/post/3308646748/writing-git-commit-messages
 http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html
 
-Message footer
--------
-
-Breaking changes
+Message footer: Breaking changes
 -------
 
 All breaking changes have to be mentioned in footer with the description of the change, justification and migration notes
