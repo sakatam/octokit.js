@@ -8,27 +8,18 @@
     var Octokit;
     Octokit = (function() {
       function Octokit(clientOptions) {
-        var AuthenticatedUser, Branch, ETagResponse, Gist, GitRepo, Organization, Repository, Team, User, clearCache, notifyEnd, notifyStart, toQueryString, _cachedETags, _client, _listeners, _request;
+        var AuthenticatedUser, Branch, Gist, GitRepo, Organization, Repository, Team, User, clearCache, notifyEnd, notifyStart, toQueryString, _cachedETags, _client, _listeners, _request;
         if (clientOptions == null) {
           clientOptions = {};
         }
         _.defaults(clientOptions, {
           rootURL: 'https://api.github.com',
-          useETags: true
+          useETags: true,
+          saveETags: true,
+          saveETagsNamePrefix: '__octokitCache_'
         });
         _client = this;
         _listeners = [];
-        ETagResponse = (function() {
-          function ETagResponse(eTag, data, textStatus, jqXHR) {
-            this.eTag = eTag;
-            this.data = data;
-            this.textStatus = textStatus;
-            this.jqXHR = jqXHR;
-          }
-
-          return ETagResponse;
-
-        })();
         _cachedETags = {};
         notifyStart = function(promise, path) {
           return promise.notify({
@@ -43,7 +34,7 @@
           });
         };
         _request = function(method, path, data, options) {
-          var ajaxConfig, auth, headers, jqXHR, mimeType, promise,
+          var ajaxConfig, auth, clearETags, getETag, headers, jqXHR, mimeType, promise, setETag,
             _this = this;
           if (options == null) {
             options = {
@@ -52,6 +43,43 @@
               isBoolean: false
             };
           }
+          setETag = function(path, isBase64, eTagInfo) {
+            var e;
+            if (clientOptions.saveETags && !isBase64) {
+              try {
+                return sessionStorage.setItem("" + clientOptions.saveETagsNamePrefix + path, JSON.stringify(eTagInfo));
+              } catch (_error) {
+                e = _error;
+                clearETags();
+                return _cachedETags[path] = eTagInfo;
+              }
+            } else {
+              return _cachedETags[path] = eTagInfo;
+            }
+          };
+          getETag = function(path) {
+            var resp;
+            if (clientOptions.saveETags) {
+              resp = sessionStorage.getItem("" + clientOptions.saveETagsNamePrefix + path);
+              if (resp) {
+                return JSON.parse(resp);
+              }
+            }
+            return _cachedETags[path];
+          };
+          clearETags = function() {
+            var i, key, _i, _ref, _results;
+            _results = [];
+            for (i = _i = _ref = sessionStorage.length - 1; _ref <= 0 ? _i <= 0 : _i >= 0; i = _ref <= 0 ? ++_i : --_i) {
+              key = sessionStorage.key(i);
+              if (key && 0 === key.indexOf(clientOptions.saveETagsNamePrefix)) {
+                _results.push(sessionStorage.removeItem(key));
+              } else {
+                _results.push(void 0);
+              }
+            }
+            return _results;
+          };
           mimeType = void 0;
           if (options.isBase64) {
             mimeType = 'text/plain; charset=x-user-defined';
@@ -62,8 +90,8 @@
           if (userAgent) {
             headers['User-Agent'] = userAgent;
           }
-          if (path in _cachedETags) {
-            headers['If-None-Match'] = _cachedETags[path].eTag;
+          if (getETag(path)) {
+            headers['If-None-Match'] = getETag(path).eTag;
           } else {
             headers['If-Modified-Since'] = 'Thu, 01 Jan 1970 00:00:00 GMT';
           }
@@ -114,9 +142,9 @@
           jqXHR.done(function(data, textStatus) {
             var converted, eTag, eTagResponse, i, _i, _ref;
             if (304 === jqXHR.status) {
-              if (clientOptions.useETags && _cachedETags[path]) {
-                eTagResponse = _cachedETags[path];
-                return promise.resolve(eTagResponse.data, eTagResponse.textStatus, eTagResponse.jqXHR);
+              if (clientOptions.useETags && getETag(path)) {
+                eTagResponse = getETag(path);
+                return promise.resolve(eTagResponse.data, eTagResponse.textStatus);
               } else {
                 return promise.resolve(jqXHR.responseText, textStatus, jqXHR);
               }
@@ -132,7 +160,11 @@
               }
               if ('GET' === method && jqXHR.getResponseHeader('ETag') && clientOptions.useETags) {
                 eTag = jqXHR.getResponseHeader('ETag');
-                _cachedETags[path] = new ETagResponse(eTag, data, textStatus, jqXHR);
+                setETag(path, options.isBase64, {
+                  eTag: eTag,
+                  data: data,
+                  textStatus: textStatus
+                });
               }
               return promise.resolve(data, textStatus, jqXHR);
             }
@@ -178,6 +210,9 @@
           return "?" + (params.join('&'));
         };
         this.clearCache = clearCache = function() {
+          if (clientOptions.saveETags) {
+            clearETags();
+          }
           return _cachedETags = {};
         };
         this.onRateLimitChanged = function(listener) {

@@ -27,15 +27,14 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
       _.defaults clientOptions,
         rootURL: 'https://api.github.com'
         useETags: true
+        # Save ETags to localStorage
+        saveETags: true
+        saveETagsNamePrefix: '__octokitCache_'
 
       _client = @ # Useful for other classes (like Repo) to get the current Client object
 
       # These are updated whenever a request is made
       _listeners = []
-
-      # To support ETag caching cache the responses.
-      class ETagResponse
-        constructor: (@eTag, @data, @textStatus, @jqXHR) ->
 
       # Cached responses are stored in this object keyed by `path`
       _cachedETags = {}
@@ -48,6 +47,39 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
       # =======
       #
       _request = (method, path, data, options={raw:false, isBase64:false, isBoolean:false}) ->
+
+        # `eTagInfo` is an object containing:
+        #
+        # - `eTag`: A string that represents the ETag from the server
+        # - `data`: Non-cached response from the server (JSON or a String)
+        # - `textStatus`: Text representation of the HTTP status code from the server
+        setETag = (path, isBase64, eTagInfo) ->
+
+          if clientOptions.saveETags and not isBase64
+            # Try to save to `sessionStorage`. If this fails, clear the `sessionStorage` cache
+            try
+              sessionStorage.setItem("#{clientOptions.saveETagsNamePrefix}#{path}", JSON.stringify(eTagInfo))
+            catch e
+              clearETags()
+              _cachedETags[path] = eTagInfo
+
+          else
+            _cachedETags[path] = eTagInfo
+
+        getETag = (path) ->
+          if clientOptions.saveETags
+            resp = sessionStorage.getItem("#{clientOptions.saveETagsNamePrefix}#{path}")
+            return JSON.parse(resp) if resp
+
+          return _cachedETags[path]
+
+        clearETags = () ->
+          # Clear the cache since we ran out of space and then try again later
+          for i in [sessionStorage.length-1..0]
+            key = sessionStorage.key(i)
+            if key and 0 == key.indexOf(clientOptions.saveETagsNamePrefix)
+              sessionStorage.removeItem(key)
+
 
         # Support binary data by overriding the response mimeType
         mimeType = undefined
@@ -63,8 +95,8 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
         headers['User-Agent'] = userAgent if userAgent
 
         # Send the ETag if re-requesting a URL
-        if path of _cachedETags
-          headers['If-None-Match'] = _cachedETags[path].eTag
+        if getETag(path)
+          headers['If-None-Match'] = getETag(path).eTag
         else
           # The browser will sneak in a 'If-Modified-Since' header if the GET has been requested before
           # but for some reason the cached response does not seem to be available
@@ -124,10 +156,10 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
         jqXHR.done (data, textStatus) ->
           # If the response was a 304 then return the cached version
           if 304 == jqXHR.status
-            if clientOptions.useETags and _cachedETags[path]
-              eTagResponse = _cachedETags[path]
+            if clientOptions.useETags and getETag(path)
+              eTagResponse = getETag(path)
 
-              promise.resolve(eTagResponse.data, eTagResponse.textStatus, eTagResponse.jqXHR)
+              promise.resolve(eTagResponse.data, eTagResponse.textStatus)
             else
               promise.resolve(jqXHR.responseText, textStatus, jqXHR)
 
@@ -151,7 +183,7 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
             # Cache the response to reuse later
             if 'GET' == method and jqXHR.getResponseHeader('ETag') and clientOptions.useETags
               eTag = jqXHR.getResponseHeader('ETag')
-              _cachedETags[path] = new ETagResponse(eTag, data, textStatus, jqXHR)
+              setETag(path, options.isBase64, {eTag:eTag, data:data, textStatus:textStatus})
 
             promise.resolve(data, textStatus, jqXHR)
 
@@ -193,7 +225,10 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
 
       # Clear the local cache
       # -------
-      @clearCache = clearCache = () -> _cachedETags = {}
+      @clearCache = clearCache = () ->
+        if clientOptions.saveETags
+          clearETags()
+        _cachedETags = {}
 
       # Add a listener that fires when the `rateLimitRemaining` changes as a result of
       # communicating with github.
