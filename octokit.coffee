@@ -35,7 +35,9 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
 
       # To support ETag caching cache the responses.
       class ETagResponse
-        constructor: (@eTag, @data, @textStatus, @jqXHR) ->
+        constructor: (@eTag, @data, @options) ->
+          # Set the status to Not Modified for the next time it is requested
+          @options.status = 304
 
       # Cached responses are stored in this object keyed by `path`
       _cachedETags = {}
@@ -48,6 +50,10 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
       # =======
       #
       _request = (method, path, data, options={raw:false, isBase64:false, isBoolean:false}) ->
+
+        # Only prefix the path when it does not begin with http.
+        # This is so pagination works (which provides absolute URLs).
+        path = "#{clientOptions.rootURL}#{path}" if not /^http/.test(path)
 
         # Support binary data by overriding the response mimeType
         mimeType = undefined
@@ -87,7 +93,7 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
         ajaxConfig =
           # Be sure to **not** blow the cache with a random number
           # (GitHub will respond with 5xx or CORS errors)
-          url: clientOptions.rootURL + path
+          url: path
           type: method
           contentType: 'application/json'
           mimeType: mimeType
@@ -97,6 +103,10 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
           data: !options.raw and data and JSON.stringify(data) or data
           dataType: 'json' unless options.raw
 
+        # Contains additional metadata when resolving the promise
+        # like prev/next methods, HTTP status code, etc
+        valOptions = {}
+
         # If the request is a boolean yes/no question GitHub will indicate
         # via the HTTP Status of 204 (No Content) or 404 instead of a 200.
         # Also, jQuery will never call `xhr.resolve` so we need to use a
@@ -104,9 +114,9 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
         if options.isBoolean
           ajaxConfig.statusCode =
             # a Boolean 'yes'
-            204: () => notifyEnd(promise, path); promise.resolve(true)
+            204: () => notifyEnd(promise, path); promise.resolve(true, valOptions)
             # a Boolean 'no'
-            404: () => notifyEnd(promise, path); promise.resolve(false)
+            404: () => notifyEnd(promise, path); promise.resolve(false, valOptions)
 
         jqXHR = jQuery.ajax(ajaxConfig)
 
@@ -122,19 +132,30 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
 
         # Return the result and Base64 encode it if `options.isBase64` flag is set.
         jqXHR.done (data, textStatus) ->
+          valOptions =
+            textStatus: textStatus
+            status: jqXHR.status
+
+          # Parse the Link headers
+          # of the form `<http://a.com>; rel="next", <https://b.com?a=b&c=d>; rel="previous"`
+          links = jqXHR.getResponseHeader('Link')
+          _.each links?.split(','), (part) ->
+            [discard, href, rel] = part.match(/<([^>]+)>;\ rel="([^"]+)"/)
+            valOptions[rel] = () -> _request('GET', href, null, options)
+
           # If the response was a 304 then return the cached version
           if 304 == jqXHR.status
             if clientOptions.useETags and _cachedETags[path]
               eTagResponse = _cachedETags[path]
 
-              promise.resolve(eTagResponse.data, eTagResponse.textStatus, eTagResponse.jqXHR)
+              promise.resolve(eTagResponse.data, eTagResponse.options)
             else
-              promise.resolve(jqXHR.responseText, textStatus, jqXHR)
+              promise.resolve(jqXHR.responseText, valOptions)
 
           # If it was a boolean question and the server responded with 204
           # return true.
           else if 204 == jqXHR.status and options.isBoolean
-            promise.resolve(true, textStatus, jqXHR)
+            promise.resolve(true, valOptions)
 
           else
 
@@ -151,9 +172,9 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
             # Cache the response to reuse later
             if 'GET' == method and jqXHR.getResponseHeader('ETag') and clientOptions.useETags
               eTag = jqXHR.getResponseHeader('ETag')
-              _cachedETags[path] = new ETagResponse(eTag, data, textStatus, jqXHR)
+              _cachedETags[path] = new ETagResponse(eTag, data, valOptions)
 
-            promise.resolve(data, textStatus, jqXHR)
+            promise.resolve(data, valOptions)
 
         # Parse the error if one occurs
         .fail (unused, msg, desc) ->

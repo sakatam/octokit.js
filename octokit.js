@@ -19,11 +19,11 @@
         _client = this;
         _listeners = [];
         ETagResponse = (function() {
-          function ETagResponse(eTag, data, textStatus, jqXHR) {
+          function ETagResponse(eTag, data, options) {
             this.eTag = eTag;
             this.data = data;
-            this.textStatus = textStatus;
-            this.jqXHR = jqXHR;
+            this.options = options;
+            this.options.status = 304;
           }
 
           return ETagResponse;
@@ -43,7 +43,7 @@
           });
         };
         _request = function(method, path, data, options) {
-          var ajaxConfig, auth, headers, jqXHR, mimeType, promise,
+          var ajaxConfig, auth, headers, jqXHR, mimeType, promise, valOptions,
             _this = this;
           if (options == null) {
             options = {
@@ -51,6 +51,9 @@
               isBase64: false,
               isBoolean: false
             };
+          }
+          if (!/^http/.test(path)) {
+            path = "" + clientOptions.rootURL + path;
           }
           mimeType = void 0;
           if (options.isBase64) {
@@ -77,7 +80,7 @@
           }
           promise = new jQuery.Deferred();
           ajaxConfig = {
-            url: clientOptions.rootURL + path,
+            url: path,
             type: method,
             contentType: 'application/json',
             mimeType: mimeType,
@@ -86,15 +89,16 @@
             data: !options.raw && data && JSON.stringify(data) || data,
             dataType: !options.raw ? 'json' : void 0
           };
+          valOptions = {};
           if (options.isBoolean) {
             ajaxConfig.statusCode = {
               204: function() {
                 notifyEnd(promise, path);
-                return promise.resolve(true);
+                return promise.resolve(true, valOptions);
               },
               404: function() {
                 notifyEnd(promise, path);
-                return promise.resolve(false);
+                return promise.resolve(false, valOptions);
               }
             };
           }
@@ -112,16 +116,28 @@
             return _results;
           });
           jqXHR.done(function(data, textStatus) {
-            var converted, eTag, eTagResponse, i, _i, _ref;
+            var converted, eTag, eTagResponse, i, links, _i, _ref;
+            valOptions = {
+              textStatus: textStatus,
+              status: jqXHR.status
+            };
+            links = jqXHR.getResponseHeader('Link');
+            _.each(links != null ? links.split(',') : void 0, function(part) {
+              var discard, href, rel, _ref;
+              _ref = part.match(/<([^>]+)>;\ rel="([^"]+)"/), discard = _ref[0], href = _ref[1], rel = _ref[2];
+              return valOptions[rel] = function() {
+                return _request('GET', href, null, options);
+              };
+            });
             if (304 === jqXHR.status) {
               if (clientOptions.useETags && _cachedETags[path]) {
                 eTagResponse = _cachedETags[path];
-                return promise.resolve(eTagResponse.data, eTagResponse.textStatus, eTagResponse.jqXHR);
+                return promise.resolve(eTagResponse.data, eTagResponse.options);
               } else {
-                return promise.resolve(jqXHR.responseText, textStatus, jqXHR);
+                return promise.resolve(jqXHR.responseText, valOptions);
               }
             } else if (204 === jqXHR.status && options.isBoolean) {
-              return promise.resolve(true, textStatus, jqXHR);
+              return promise.resolve(true, valOptions);
             } else {
               if ('GET' === method && options.isBase64) {
                 converted = '';
@@ -132,9 +148,9 @@
               }
               if ('GET' === method && jqXHR.getResponseHeader('ETag') && clientOptions.useETags) {
                 eTag = jqXHR.getResponseHeader('ETag');
-                _cachedETags[path] = new ETagResponse(eTag, data, textStatus, jqXHR);
+                _cachedETags[path] = new ETagResponse(eTag, data, valOptions);
               }
-              return promise.resolve(data, textStatus, jqXHR);
+              return promise.resolve(data, valOptions);
             }
           }).fail(function(unused, msg, desc) {
             var json;
