@@ -386,7 +386,7 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
 
           # Remove Emails associated with this user
           # -------
-          @addEmail = (emails) ->
+          @removeEmail = (emails) ->
             emails = [emails] if !_.isArray(emails)
             _request 'DELETE', '/user/emails', emails
 
@@ -989,10 +989,20 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
             _request 'GET', "#{@repoPath}/contents?ref=#{branch}", {path: path}
 
 
+          # List forks of a repository
+          # -------
+          # Takes an optional sort parameter: `newest`, `oldest`, or `stargazers`
+          @getForks = (sort='newest') ->
+            queryString = toQueryString({sort:sort})
+            _request 'GET', "#{@repoPath}/forks#{queryString}", null
+
+
           # Fork repository
           # -------
-          @fork = () ->
-            _request 'POST', "#{@repoPath}/forks", null
+          @fork = (organization=null) ->
+            options = {}
+            options.organization = organization if organization
+            _request 'POST', "#{@repoPath}/forks", options
 
 
           # Create pull request
@@ -1148,7 +1158,7 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
 
           # List all Languages
           # -------
-          @getLanguages = ->
+          @getLanguages = () ->
             _request 'GET', "#{@repoPath}/languages", null
 
 

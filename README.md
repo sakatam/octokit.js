@@ -104,7 +104,7 @@ repo.getBranches()
 Fork a repository
 
 ```js
-repo.fork()
+repo.fork() // Optional organization to fork to
 .done(function() {});
 ```
 

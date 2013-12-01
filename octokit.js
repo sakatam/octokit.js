@@ -349,7 +349,7 @@
               }
               return _request('POST', '/user/emails', emails);
             };
-            this.addEmail = function(emails) {
+            this.removeEmail = function(emails) {
               if (!_.isArray(emails)) {
                 emails = [emails];
               }
@@ -866,8 +866,25 @@
                 path: path
               });
             };
-            this.fork = function() {
-              return _request('POST', "" + this.repoPath + "/forks", null);
+            this.getForks = function(sort) {
+              var queryString;
+              if (sort == null) {
+                sort = 'newest';
+              }
+              queryString = toQueryString({
+                sort: sort
+              });
+              return _request('GET', "" + this.repoPath + "/forks" + queryString, null);
+            };
+            this.fork = function(organization) {
+              if (organization == null) {
+                organization = null;
+              }
+              options = {};
+              if (organization) {
+                options.organization = organization;
+              }
+              return _request('POST', "" + this.repoPath + "/forks", options);
             };
             this.createPullRequest = function(options) {
               return _request('POST', "" + this.repoPath + "/pulls", options);
