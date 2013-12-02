@@ -1,0 +1,15 @@
+{
+  "name": "blanket",
+  "main": [
+    "./dist/qunit/blanket.js"
+  ],
+  "homepage": "https://github.com/alex-seville/blanket",
+  "_release": "e8c7207fba",
+  "_resolution": {
+    "type": "branch",
+    "branch": "development",
+    "commit": "e8c7207fba8c2e12ea6e4c62006c0d0a09e0d79d"
+  },
+  "_source": "git://github.com/alex-seville/blanket.git",
+  "_target": "development"
+}
