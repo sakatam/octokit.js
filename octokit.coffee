@@ -27,6 +27,7 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
       _.defaults clientOptions,
         rootURL: 'https://api.github.com'
         useETags: true
+        usePostInsteadOfPatch: false
 
       _client = @ # Useful for other classes (like Repo) to get the current Client object
 
@@ -48,6 +49,9 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
       # =======
       #
       _request = (method, path, data, options={raw:false, isBase64:false, isBoolean:false}) ->
+
+        if 'PATCH' == method and clientOptions.usePostInsteadOfPatch
+          method = 'POST'
 
         # Support binary data by overriding the response mimeType
         mimeType = undefined
@@ -108,20 +112,20 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
             # a Boolean 'no'
             404: () => notifyEnd(promise, path); promise.resolve(false)
 
-        xhr = jQuery.ajax(ajaxConfig)
+        jqXHR = jQuery.ajax(ajaxConfig)
 
-        xhr.always =>
+        jqXHR.always =>
           notifyEnd(promise, path)
           # Fire listeners when the request completes or fails
-          rateLimit = parseFloat(xhr.getResponseHeader 'X-RateLimit-Limit')
-          rateLimitRemaining = parseFloat(xhr.getResponseHeader 'X-RateLimit-Remaining')
+          rateLimit = parseFloat(jqXHR.getResponseHeader 'X-RateLimit-Limit')
+          rateLimitRemaining = parseFloat(jqXHR.getResponseHeader 'X-RateLimit-Remaining')
 
           for listener in _listeners
             listener(rateLimitRemaining, rateLimit, method, path, data, options)
 
 
         # Return the result and Base64 encode it if `options.isBase64` flag is set.
-        xhr.done (data, textStatus, jqXHR) ->
+        jqXHR.done (data, textStatus) ->
           # If the response was a 304 then return the cached version
           if 304 == jqXHR.status
             if clientOptions.useETags and _cachedETags[path]
@@ -156,19 +160,23 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
             promise.resolve(data, textStatus, jqXHR)
 
         # Parse the error if one occurs
-        .fail (xhr, msg, desc) ->
+        .fail (unused, msg, desc) ->
           # If the request was for a Boolean then a 404 should be treated as a "false"
-          if options.isBoolean and 404 == xhr.status
+          if options.isBoolean and 404 == jqXHR.status
             promise.resolve(false)
 
           else
 
-            if xhr.getResponseHeader('Content-Type') != 'application/json; charset=utf-8'
-              promise.reject {error: xhr.responseText, status: xhr.status, _xhr: xhr}
+            if jqXHR.getResponseHeader('Content-Type') != 'application/json; charset=utf-8'
+              promise.reject {error: jqXHR.responseText, status: jqXHR.status, _jqXHR: jqXHR}
 
             else
-              json = JSON.parse xhr.responseText
-              promise.reject {error: json, status: xhr.status, _xhr: xhr}
+              if jqXHR.responseText
+                json = JSON.parse jqXHR.responseText
+              else
+                # In the case of 404 errors, `responseText` is an empty string
+                json = ''
+              promise.reject {error: json, status: jqXHR.status, _jqXHR: jqXHR}
 
         notifyStart(promise, path)
         # Return the promise
@@ -187,6 +195,9 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
           params.push "#{key}=#{encodeURIComponent(value)}"
         return "?#{params.join('&')}"
 
+      # Clear the local cache
+      # -------
+      @clearCache = clearCache = () -> _cachedETags = {}
 
       # Add a listener that fires when the `rateLimitRemaining` changes as a result of
       # communicating with github.
@@ -503,10 +514,6 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
       class GitRepo
 
         constructor: (@repoUser, @repoName) ->
-          # Private variables
-          _currentTree =
-            branch: null
-            sha: null
           _repoPath = "/repos/#{@repoUser}/#{@repoName}"
 
           # Delete this Repository
@@ -519,15 +526,7 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
           # Uses the cache if branch has not been changed
           # -------
           @_updateTree = (branch) ->
-            # Since this method always returns a promise, wrap the result in a deferred
-            if branch is _currentTree.branch and _currentTree.sha
-              return (new jQuery.Deferred()).resolve(_currentTree.sha)
-
             @getRef("heads/#{branch}")
-            .then (sha) =>
-              _currentTree.branch = branch
-              _currentTree.sha = sha
-              return sha
             # Return the promise
             .promise()
 
@@ -600,6 +599,19 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
             .promise()
 
 
+          # Get contents (file/dir)
+          # -------
+          @getContents = (path, sha=null) ->
+            queryString = ''
+            if sha != null
+              queryString = toQueryString({ref:sha})
+            _request('GET', "#{_repoPath}/contents/#{path}#{queryString}", null, {raw:true})
+            .then (contents) =>
+              return contents
+            # Return the promise
+            .promise()
+
+
           # Retrieve the tree a commit points to
           # -------
           # Optionally set recursive to true
@@ -634,15 +646,18 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
 
           # Update an existing tree adding a new blob object getting a tree SHA back
           # -------
-          @updateTree = (baseTree, path, blob) ->
+          # `newTree` is of the form:
+          #
+          #     [ {
+          #       path: path
+          #       mode: '100644'
+          #       type: 'blob'
+          #       sha: blob
+          #     } ]
+          @updateTreeMany = (baseTree, newTree) ->
             data =
               base_tree: baseTree
-              tree: [
-                path: path
-                mode: '100644'
-                type: 'blob'
-                sha: blob
-              ]
+              tree: newTree
 
             _request('POST', "#{_repoPath}/git/trees", data)
             .then (res) =>
@@ -665,24 +680,25 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
           # Create a new commit object with the current commit SHA as the parent
           # and the new tree SHA, getting a commit SHA back
           # -------
-          @commit = (parent, tree, message) ->
+          @commit = (parents, tree, message) ->
+            parents = [parents] if not _.isArray(parents)
             data =
               message: message
-              parents: [parent]
+              parents: parents
               tree: tree
 
             _request('POST', "#{_repoPath}/git/commits", data)
-            .then (res) =>
-              _currentTree.sha = res.sha # update latest commit
-              return res.sha
+            .then((commit) -> return commit.sha)
             # Return the promise
             .promise()
 
 
           # Update the reference of your head to point to the new commit SHA
           # -------
-          @updateHead = (head, commit) ->
-            _request 'PATCH', "#{_repoPath}/git/refs/heads/#{head}", {sha: commit}
+          @updateHead = (head, commit, force=false) ->
+            options = {sha:commit}
+            options.force = true if force
+            _request 'PATCH', "#{_repoPath}/git/refs/heads/#{head}", options
 
 
           # Get a single commit
@@ -751,6 +767,19 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
             .promise()
 
 
+          # Creates a new branch based on the current reference of this branch
+          # -------
+          @createBranch = (newBranchName) ->
+            _getRef()
+            .then (branch) =>
+              _git.getSha(branch, '')
+              .then (sha) =>
+                _git.createRef({sha:sha, ref:"refs/heads/#{newBranchName}"})
+
+            # Return the promise
+            .promise()
+
+
           # Read file at given path
           # -------
           # Set `isBase64=true` to get back a base64 encoded binary file
@@ -763,6 +792,20 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
                 # Return both the commit hash and the content
                 .then (bytes) =>
                   return {sha:sha, content:bytes}
+            # Return the promise
+            .promise()
+
+
+          # Get contents at given path
+          # -------
+          @contents = (path) ->
+            _getRef()
+            .then (branch) =>
+              _git.getSha(branch, '')
+              .then (sha) =>
+                _git.getContents(path, sha)
+                .then (contents) =>
+                  return contents
             # Return the promise
             .promise()
 
@@ -821,20 +864,78 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
           # Write file contents to a given branch and path
           # -------
           # To write base64 encoded data set `isBase64==true`
-          @write = (path, content, message="Changed #{path}", isBase64) ->
+          #
+          # Optionally takes a `parentCommitSha` which will be used as the
+          # parent of this commit
+          @write = (path, content, message="Changed #{path}", isBase64, parentCommitSha=null) ->
+            contents = {}
+            contents[path] =
+              content: content
+              isBase64: isBase64
+
+            @writeMany(contents, message, parentCommitSha)
+            # Return the promise
+            .promise()
+
+
+          # Write the contents of multiple files to a given branch
+          # -------
+          # Each file can also be binary.
+          #
+          # In general `contents` is a map where the key is the path and the value is `{content:'Hello World!', isBase64:false}`.
+          # In the case of non-base64 encoded files the value may be a string instead.
+          #
+          # Example:
+          #
+          #     contents = {
+          #       'hello.txt':          'Hello World!',
+          #       'path/to/hello2.txt': { content: 'Ahoy!', isBase64: false}
+          #     }
+          #
+          # Optionally takes an array of `parentCommitShas` which will be used as the
+          # parents of this commit.
+          @writeMany = (contents, message="Changed Multiple", parentCommitShas=null) ->
+            # This method:
+            #
+            # 0. Finds the latest commit if one is not provided
+            # 1. Asynchronously send new blobs for each file
+            # 2. Use the return of the new Blob Post to return an entry in the new Commit Tree
+            # 3. Wait on all the new blobs to finish
+            # 4. Commit and update the branch
             _getRef()
-            .then (branch) =>
-              _git._updateTree(branch)
-              .then (latestCommit) =>
-                _git.postBlob(content, isBase64)
-                .then (blob) =>
-                  _git.updateTree(latestCommit, path, blob)
-                  .then (tree) =>
-                    _git.commit(latestCommit, tree, message)
+            .then (branch) => # See below for Step 0.
+              afterParentCommitShas = (parentCommitShas) => # 1. Asynchronously send all the files as new blobs.
+                promises = _.map _.pairs(contents), ([path, data]) ->
+                  # `data` can be an object or a string.
+                  # If it is a string assume isBase64 is false and the string is the content
+                  content = data.content or data
+                  isBase64 = data.isBase64 or false
+                  _git.postBlob(content, isBase64)
+                  .then (blob) => # 2. return an entry in the new Commit Tree
+                    return {
+                      path: path
+                      mode: '100644'
+                      type: 'blob'
+                      sha: blob
+                    }
+                # 3. Wait on all the new blobs to finish
+                jQuery.when.apply(jQuery, promises)
+                .then (newTree1, newTree2, newTreeN) =>
+                  newTrees = _.toArray(arguments) # Convert args from jQuery.when back to an array. kludgy
+                  _git.updateTreeMany(parentCommitShas, newTrees)
+                  .then (tree) => # 4. Commit and update the branch
+                    _git.commit(parentCommitShas, tree, message)
                     .then (commitSha) =>
                       _git.updateHead(branch, commitSha)
                       .then (res) => # Finally, return the result
                         return res.object # Return something that has a `.sha` to match the signature for read
+
+              # 0. Finds the latest commit if one is not provided
+              if parentCommitShas
+                return afterParentCommitShas(parentCommitShas)
+              else
+                return _git._updateTree(branch).then(afterParentCommitShas)
+
             # Return the promise
             .promise()
 
@@ -890,7 +991,7 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
 
           # Get contents
           # --------
-          @contents = (branch, path) ->
+          @getContents = (branch, path) ->
             _request 'GET', "#{@repoPath}/contents?ref=#{branch}", {path: path}
 
 
@@ -931,7 +1032,7 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
           # List events for a network of Repositories
           # -------
           @getNetworkEvents = () ->
-            _request 'GET', "/networks/#{_owner}/#{_repo}/events", null
+            _request 'GET', "/networks/#{_user}/#{_repo}/events", null
 
 
           # List unread notifications for authenticated user
@@ -964,6 +1065,14 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
           @getCollaborators = () ->
             _request 'GET', "#{@repoPath}/collaborators", null
 
+          @addCollaborator = (username) ->
+            throw new Error 'BUG: username is required' if not username
+            _request 'PUT', "#{@repoPath}/collaborators/#{username}", null, {isBoolean:true}
+
+          @removeCollaborator = (username) ->
+            throw new Error 'BUG: username is required' if not username
+            _request 'DELETE', "#{@repoPath}/collaborators/#{username}", null, {isBoolean:true}
+
           @isCollaborator = (username=null) ->
             throw new Error 'BUG: username is required' if not username
             _request 'GET', "#{@repoPath}/collaborators/#{username}", null, {isBoolean:true}
@@ -975,7 +1084,7 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
           @canCollaborate = () ->
             # Short-circuit if no credentials provided
             if not (clientOptions.password or clientOptions.token)
-              return (new $.Deferred()).resolve(false)
+              return (new jQuery.Deferred()).resolve(false)
 
             _client.getLogin()
             .then (login) =>
@@ -1139,6 +1248,9 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
       # Top Level API
       # -------
       @getRepo = (user, repo) ->
+        throw new Error('BUG! user argument is required') if not user
+        throw new Error('BUG! repo argument is required') if not repo
+
         new Repository(
           user: user
           name: repo
@@ -1217,8 +1329,8 @@ else if @_ and @jQuery and (@btoa or @Base64)
   encode = @btoa or @Base64.encode
   Octokit = makeOctokit @_, @jQuery, encode
   # Assign to `Octokit` and `Github` global for backwards compatibility
-  @Octokit ?= Octokit
-  @Github ?= Octokit
+  @Octokit = Octokit
+  @Github = Octokit
 
 
 # Otherwise, throw an error

@@ -54,7 +54,36 @@ module.exports = (grunt) ->
         commit: true
         push: true
         pushTo: ''
-        commitFiles: ['package.json', 'octokit.js']
+        commitFiles: ['package.json', 'bower.json', 'octokit.js']
+        # Files to bump the version number of
+        files: ['package.json', 'bower.json']
+
+    mochaTest:
+      test:
+        options:
+          reporter: 'spec'
+          require: 'coffee-script'
+        src: ['test/**/node*.coffee']
+
+    # Used for coveralls.io code coverage
+    mochacov:
+      options:
+        coverage: true # use blanket
+        reporter: 'spec'
+        require: ['coffee-script']
+        compilers: ['coffee:coffee-script']
+      all: ['test/**/node*.coffee']
+
+    # Code coverage in PhantomJS requires commenting out the following in
+    # node_modules/mocha/mocha.js:
+    # - `self.suiteURL(suite)`
+    # - `self.testURL(test)`
+    blanket_mocha:
+      all: [ 'test/index.html' ]
+      options:
+        threshold: 54
+        log: true
+        reporter: 'Dot'
 
 
   # Dependencies
@@ -72,6 +101,10 @@ module.exports = (grunt) ->
   # -----
   grunt.registerTask 'test', [
     'coffeelint'
+    'clean'
+    'coffee'
+    'mochaTest'
+    #'blanket_mocha' NOTE: Uncomment once the `suiteURL` problem noted above is fixed
   ]
 
   # Dist
@@ -80,6 +113,8 @@ module.exports = (grunt) ->
     'clean'
     'coffeelint'
     'coffee'
+    'mochaTest'
+    #'blanket_mocha'
     'bump'
   ]
 
@@ -87,6 +122,8 @@ module.exports = (grunt) ->
     'clean'
     'coffeelint'
     'coffee'
+    'mochaTest'
+    #'blanket_mocha'
     'bump:minor'
   ]
 
