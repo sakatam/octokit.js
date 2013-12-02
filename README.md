@@ -1,4 +1,4 @@
-# octokit.js
+# octokit.js [![Build Status](https://travis-ci.org/philschatz/octokit.js.png)](https://travis-ci.org/philschatz/octokit.js)
 
 octokit.js provides a minimal higher-level wrapper around git's [plumbing commands](http://git-scm.com/book/en/Git-Internals-Plumbing-and-Porcelain),
 exposing an API for manipulating GitHub repositories, users, groups, and gists.
