@@ -6,7 +6,12 @@ makeTests = (_, assert, expect, btoa, Octokit) ->
   REPO_USER = USERNAME
   REPO_NAME = 'octokit-test-repo' # Cannot use '.' because najax does not like it
 
+  REPO_HOMEPAGE = 'https:/github.com/philschatz/octokit.js'
+  OTHER_HOMEPAGE = 'http://example.com'
+ 
   OTHER_USERNAME = 'octokit-test2'
+
+  DEFAULT_BRANCH = 'master'
 
   LONG_TIMEOUT = 10 * 1000 # 10 seconds
   SHORT_TIMEOUT = 5 * 1000 # 5 seconds
@@ -82,7 +87,7 @@ makeTests = (_, assert, expect, btoa, Octokit) ->
           console.log('BEFORE: Creating test repo')
           options =
             description: 'Test Repository for https:/github.com/philschatz/octokit.js'
-            homepage: 'https:/github.com/philschatz/octokit.js'
+            homepage: REPO_HOMEPAGE
             # private: false
             # has_issues: false
             # has_wiki: false
@@ -114,6 +119,7 @@ makeTests = (_, assert, expect, btoa, Octokit) ->
                 done()
 
           console.log('BEFORE: Resetting test repo')
+          trapFail(STATE[REPO].updateInfo({name: REPO_NAME, homepage: REPO_HOMEPAGE}))
           trapFail(STATE[REPO].getCommits())
           .done (findLastCommits)
 
@@ -211,6 +217,22 @@ makeTests = (_, assert, expect, btoa, Octokit) ->
 
                   helper1 done, STATE[REPO].isCollaborator(OTHER_USERNAME), (canCollaborate) ->
                     expect(canCollaborate).to.be.false
+
+      describe 'Editing Repository:', () ->
+        it 'initially the repository homepage should be [REPO_HOMEPAGE]', (done) ->
+          helper1 done, STATE[REPO].getInfo(), (info) ->
+            expect(info.homepage).to.equal(REPO_HOMEPAGE)
+
+        it 'should be able to edit the repo homepage', (done) ->
+          helper2 STATE[REPO].updateInfo({name: REPO_NAME, homepage: OTHER_HOMEPAGE}), ->
+
+            helper1 done, STATE[REPO].getInfo(), (info) ->
+              expect(info.homepage).to.equal(OTHER_HOMEPAGE)
+
+        it 'changing the default branch should not explode', (done) ->
+          helper1 done, STATE[REPO].setDefaultBranch(DEFAULT_BRANCH), (result) ->
+            expect(result.default_branch).to.equal(DEFAULT_BRANCH)
+        
 
       describe 'Events:', () ->
         itIsOk(REPO, 'getEvents')
