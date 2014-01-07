@@ -846,6 +846,9 @@
               branch: null,
               sha: null
             };
+            this.updateInfo = function(options) {
+              return _request('PATCH', this.repoPath, options);
+            };
             this.getBranches = function() {
               return this.git.getBranches();
             };
@@ -869,6 +872,12 @@
                 });
               };
               return new Branch(this.git, getRef);
+            };
+            this.setDefaultBranch = function(branchName) {
+              return this.updateInfo({
+                name: _repo,
+                default_branch: branchName
+              });
             };
             this.getInfo = function() {
               return _request('GET', this.repoPath, null);
