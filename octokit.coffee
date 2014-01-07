@@ -958,6 +958,11 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
             branch: null
             sha: null
 
+
+          @updateInfo = (options) ->
+            _request 'PATCH', @repoPath, options
+
+
           # List all branches of a repository
           # -------
           @getBranches = () -> @git.getBranches()
@@ -982,6 +987,10 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
               .then (info) =>
                 return info.master_branch
             new Branch(@git, getRef)
+
+
+          @setDefaultBranch = (branchName) ->
+            @updateInfo {name: _repo, default_branch: branchName}
 
 
           # Get repository information
