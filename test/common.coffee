@@ -3,6 +3,8 @@ makeTests = (_, assert, expect, btoa, Octokit) ->
   USERNAME = 'octokit-test'
   TOKEN = 'dca7f85a5911df8e9b7aeb4c5be8f5f50806ac49'
 
+  ORG_NAME = 'octokit-test-org'
+
   REPO_USER = USERNAME
   REPO_NAME = 'octokit-test-repo' # Cannot use '.' because najax does not like it
 
@@ -233,6 +235,11 @@ makeTests = (_, assert, expect, btoa, Octokit) ->
           helper1 done, STATE[REPO].setDefaultBranch(DEFAULT_BRANCH), (result) ->
             expect(result.default_branch).to.equal(DEFAULT_BRANCH)
         
+      describe 'fetch organization', () ->
+        it 'should be able to fetch organization info', (done) ->
+
+          helper1 done, STATE[GH].getOrg(ORG_NAME).getInfo(), (info) ->
+            expect(info.login).to.equal(ORG_NAME)
 
       describe 'Events:', () ->
         itIsOk(REPO, 'getEvents')
