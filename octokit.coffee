@@ -1265,6 +1265,9 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
           name: repo
         )
 
+      @getOrg = (name) ->
+        new Organization(name)
+
       # API for viewing info for arbitrary users or the current user
       # if no arguments are provided.
       @getUser = (login=null) ->

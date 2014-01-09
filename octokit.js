@@ -1109,6 +1109,9 @@
             name: repo
           });
         };
+        this.getOrg = function(name) {
+          return new Organization(name);
+        };
         this.getUser = function(login) {
           if (login == null) {
             login = null;
