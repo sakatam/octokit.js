@@ -887,8 +887,14 @@
                 path: path
               });
             };
-            this.fork = function() {
-              return _request('POST', "" + this.repoPath + "/forks", null);
+            this.fork = function(organization) {
+              if (organization) {
+                return _request('POST', "" + this.repoPath + "/forks", {
+                  organization: organization
+                });
+              } else {
+                return _request('POST', "" + this.repoPath + "/forks", null);
+              }
             };
             this.createPullRequest = function(options) {
               return _request('POST', "" + this.repoPath + "/pulls", options);

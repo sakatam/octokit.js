@@ -1006,8 +1006,12 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
 
           # Fork repository
           # -------
-          @fork = () ->
-            _request 'POST', "#{@repoPath}/forks", null
+          @fork = (organization) ->
+            if organization
+              _request 'POST', "#{@repoPath}/forks",
+                organization: organization
+            else
+              _request 'POST', "#{@repoPath}/forks", null
 
 
           # Create pull request
