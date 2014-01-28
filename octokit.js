@@ -470,6 +470,9 @@
               options.name = name;
               return _request('POST', "/orgs/" + this.name + "/repos", options);
             };
+            this.getRepos = function() {
+              return _request('GET', "/orgs/" + this.name + "/repos?type=all", null);
+            };
           }
 
           return Organization;
