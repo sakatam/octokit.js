@@ -506,6 +506,12 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
             _request 'POST', "/orgs/#{@name}/repos", options
 
 
+          # List repos for an organisation
+          # -------
+          @getRepos = () ->
+            _request 'GET', "/orgs/#{@name}/repos?type=all", null
+
+
       # Repository API
       # =======
 
