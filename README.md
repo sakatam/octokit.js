@@ -292,10 +292,11 @@ user.getInfo()
 .fail(function(err) {});
 ```
 
-List public repositories for a particular user.
+List public repositories for a particular user.    
+_options described [here](http://developer.github.com/v3/repos/#list-user-repositories)_
 
 ```js
-user.getRepos()
+user.getRepos(type='all', sort='pushed', direction='desc')
 .done(function(repos) {});
 ```
 
