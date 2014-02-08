@@ -277,8 +277,17 @@
                 return _cachedInfo = info;
               });
             };
-            this.getRepos = function() {
-              return _request('GET', "" + _rootPath + "/repos?type=all&per_page=1000&sort=updated", null);
+            this.getRepos = function(type, sort, direction) {
+              if (type == null) {
+                type = 'all';
+              }
+              if (sort == null) {
+                sort = 'pushed';
+              }
+              if (direction == null) {
+                direction = 'desc';
+              }
+              return _request('GET', "" + _rootPath + "/repos?type=" + type + "&per_page=1000&sort=" + sort + "&direction=" + direction, null);
             };
             this.getOrgs = function() {
               return _request('GET', "" + _rootPath + "/orgs", null);

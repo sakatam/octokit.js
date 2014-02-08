@@ -290,8 +290,8 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
 
           # List user repositories
           # -------
-          @getRepos = () ->
-            _request 'GET', "#{_rootPath}/repos?type=all&per_page=1000&sort=updated", null
+          @getRepos = (type='all', sort='pushed', direction='desc') ->
+            _request 'GET', "#{_rootPath}/repos?type=#{type}&per_page=1000&sort=#{sort}&direction=#{direction}", null
 
           # List user organizations
           # -------
