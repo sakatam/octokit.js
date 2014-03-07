@@ -171,7 +171,7 @@ Additional methods are available for a specific branch in a repository
 Get the Default branch of a repository
 
 ```js
-var branch = repo.getDefaultBranch();
+var branch = repo.getBranch();
 ```
 
 Get a specific branch of a repository
@@ -292,7 +292,7 @@ user.getInfo()
 .fail(function(err) {});
 ```
 
-List public repositories for a particular user.    
+List public repositories for a particular user.
 _options described [here](http://developer.github.com/v3/repos/#list-user-repositories)_
 
 ```js

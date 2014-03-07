@@ -976,12 +976,15 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
 
           # Get a branch of a repository
           # -------
-          @getBranch = (branchName) ->
-            getRef = =>
-              deferred = new jQuery.Deferred()
-              deferred.resolve(branchName)
-              deferred
-            new Branch(@git, getRef)
+          @getBranch = (branchName=null) ->
+            if branchName
+              getRef = () =>
+                deferred = new jQuery.Deferred()
+                deferred.resolve(branchName)
+                deferred
+              return new Branch(@git, getRef)
+            else
+              return @getDefaultBranch()
 
 
           # Get the default branch of a repository

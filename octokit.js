@@ -867,13 +867,20 @@
             this.getBranch = function(branchName) {
               var getRef,
                 _this = this;
-              getRef = function() {
-                var deferred;
-                deferred = new jQuery.Deferred();
-                deferred.resolve(branchName);
-                return deferred;
-              };
-              return new Branch(this.git, getRef);
+              if (branchName == null) {
+                branchName = null;
+              }
+              if (branchName) {
+                getRef = function() {
+                  var deferred;
+                  deferred = new jQuery.Deferred();
+                  deferred.resolve(branchName);
+                  return deferred;
+                };
+                return new Branch(this.git, getRef);
+              } else {
+                return this.getDefaultBranch();
+              }
             };
             this.getDefaultBranch = function() {
               var getRef,
