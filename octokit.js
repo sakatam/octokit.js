@@ -1207,7 +1207,7 @@
           console.error(msg);
         }
       }
-      throw msg;
+      throw new Error(msg);
     };
     if (!this._) {
       err('Underscore not included');
@@ -1215,7 +1215,7 @@
     if (!this.jQuery) {
       err('jQuery not included');
     }
-    if (!this.Base64 && !this.btoa) {
+    if (!(this.btoa || this.Base64)) {
       err('Base64 not included');
     }
   }

@@ -1326,9 +1326,9 @@ if exports?
   jQuery.ajax = najax
   # Encode using native Base64
   encode = (str) ->
-    buffer = new Buffer str, 'binary'
-    buffer.toString 'base64'
-  Octokit = makeOctokit _, jQuery, encode, 'octokit' # `User-Agent` (for nodejs)
+    buffer = new Buffer(str, 'binary')
+    return buffer.toString('base64')
+  Octokit = makeOctokit(_, jQuery, encode, 'octokit') # `User-Agent` (for nodejs)
   exports.new = (options) -> new Octokit(options)
 
 # If requirejs is detected then define this module
@@ -1339,18 +1339,18 @@ else if @define?
     # Otherwise, try to use the javascript Base64 code.
     if @btoa
       @define moduleName, ['underscore', 'jquery'], (_, jQuery) ->
-        return makeOctokit _, jQuery, @btoa
+        return makeOctokit(_, jQuery, @btoa)
     else
       @define moduleName, ['underscore', 'jquery', 'base64'], (_, jQuery, Base64) ->
-        return makeOctokit _, jQuery, Base64.encode
+        return makeOctokit(_, jQuery, Base64.encode)
 
 # If a global jQuery and underscore is loaded then use it
 else if @_ and @jQuery and (@btoa or @Base64)
   # Use the `btoa` function if it is defined (Webkit/Mozilla) and fail back to
   # `Base64.encode` otherwise (IE)
   encode = @btoa or @Base64.encode
-  Octokit = makeOctokit @_, @jQuery, encode
-  # Assign to `Octokit` and `Github` global for backwards compatibility
+  Octokit = makeOctokit(@_, @jQuery, encode)
+  # Assign to a global `Octokit`
   @Octokit = Octokit
   @Github = Octokit
 
@@ -1358,9 +1358,9 @@ else if @_ and @jQuery and (@btoa or @Base64)
 # Otherwise, throw an error
 else
   err = (msg) ->
-    console?.error? msg
-    throw msg
+    console?.error?(msg)
+    throw new Error(msg)
 
   err 'Underscore not included' if not @_
   err 'jQuery not included' if not @jQuery
-  err 'Base64 not included' if not @Base64 and not @btoa
+  err 'Base64 not included' if not (@btoa or @Base64)
