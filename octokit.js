@@ -563,6 +563,15 @@
                 return contents;
               }).promise();
             };
+            this.removeFile = function(path, message, sha, branch) {
+              var params;
+              params = {
+                message: message,
+                sha: sha,
+                branch: branch
+              };
+              return _request('DELETE', "" + _repoPath + "/contents/" + path, params, null);
+            };
             this.getTree = function(tree, options) {
               var queryString,
                 _this = this;
@@ -721,34 +730,22 @@
                 });
               }).promise();
             };
-            this.remove = function(path, message) {
+            this.remove = function(path, message, sha) {
               var _this = this;
               if (message == null) {
                 message = "Removed " + path;
               }
+              if (sha == null) {
+                sha = null;
+              }
               return _getRef().then(function(branch) {
-                return _git._updateTree(branch).then(function(latestCommit) {
-                  return _git.getTree(latestCommit, {
-                    recursive: true
-                  }).then(function(tree) {
-                    var newTree;
-                    newTree = _.reject(tree, function(ref) {
-                      return ref.path === path;
-                    });
-                    _.each(newTree, function(ref) {
-                      if (ref.type === 'tree') {
-                        return delete ref.sha;
-                      }
-                    });
-                    return _git.postTree(newTree).then(function(rootTree) {
-                      return _git.commit(latestCommit, rootTree, message).then(function(commit) {
-                        return _git.updateHead(branch, commit).then(function(res) {
-                          return res;
-                        });
-                      });
-                    });
+                if (sha) {
+                  return _git.removeFile(path, message, sha, branch);
+                } else {
+                  return _git.getSha(branch, path).then(function(sha) {
+                    return _git.removeFile(path, message, sha, branch);
                   });
-                });
+                }
               }).promise();
             };
             this.move = function(path, newPath, message) {

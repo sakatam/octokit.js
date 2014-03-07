@@ -618,6 +618,16 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
             .promise()
 
 
+          # Remove a file from the tree
+          # -------
+          @removeFile = (path, message, sha, branch) ->
+            params =
+              message: message
+              sha: sha
+              branch: branch
+            _request 'DELETE', "#{_repoPath}/contents/#{path}", params, null
+
+
           # Retrieve the tree a commit points to
           # -------
           # Optionally set recursive to true
@@ -818,26 +828,17 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
 
           # Remove a file from the tree
           # -------
-          @remove = (path, message="Removed #{path}") ->
+          # Optionally provide the sha of the file so it is not accidentally
+          # deleted if the repo has changed in the meantime.
+          @remove = (path, message="Removed #{path}", sha=null) ->
             _getRef()
             .then (branch) =>
-              _git._updateTree(branch)
-              .then (latestCommit) =>
-                _git.getTree(latestCommit, {recursive:true})
-                .then (tree) =>
-                  newTree = _.reject(tree, (ref) -> # Update Tree
-                    ref.path is path
-                  )
-                  _.each newTree, (ref) ->
-                    delete ref.sha  if ref.type is 'tree'
-
-                  _git.postTree(newTree)
-                  .then (rootTree) =>
-                    _git.commit(latestCommit, rootTree, message)
-                    .then (commit) =>
-                      _git.updateHead(branch, commit)
-                      .then (res) =>
-                        return res # Finally, return the result
+              if sha
+                _git.removeFile(path, message, sha, branch)
+              else
+                _git.getSha(branch, path)
+                .then (sha) =>
+                  _git.removeFile(path, message, sha, branch)
 
             # Return the promise
             .promise()

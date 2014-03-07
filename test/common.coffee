@@ -10,7 +10,7 @@ makeTests = (_, assert, expect, btoa, Octokit) ->
 
   REPO_HOMEPAGE = 'https:/github.com/philschatz/octokit.js'
   OTHER_HOMEPAGE = 'http://example.com'
- 
+
   OTHER_USERNAME = 'octokit-test2'
 
   DEFAULT_BRANCH = 'master'
@@ -167,6 +167,12 @@ makeTests = (_, assert, expect, btoa, Octokit) ->
               PREV_SHA = val.sha
               done()
 
+        it 'removes a single file', (done) ->
+          FILE_PATH = 'test.txt'
+          trapFail(STATE[BRANCH].remove(FILE_PATH))
+          .done () ->
+            done()
+
         it 'commits multiple files at once (including binary ones)', (done) ->
           FILE1 = 'testdir/test1.txt'
           FILE2 = 'testdir/test2.txt'
@@ -186,9 +192,9 @@ makeTests = (_, assert, expect, btoa, Octokit) ->
                 expect(val.content).to.equal(contents[FILE2].content)
                 done()
 
-        it 'should have created 3 commits (2 + the initial)', (done) ->
+        it 'should have created 4 commits (3 + the initial)', (done) ->
           helper1 done, STATE[REPO].getCommits(), (commits) ->
-            expect(commits).to.have.length(3)
+            expect(commits).to.have.length(4)
 
       describe 'Collaborators:', () ->
         it 'initially should have only 1 collaborator', (done) ->
@@ -234,7 +240,7 @@ makeTests = (_, assert, expect, btoa, Octokit) ->
         it 'changing the default branch should not explode', (done) ->
           helper1 done, STATE[REPO].setDefaultBranch(DEFAULT_BRANCH), (result) ->
             expect(result.default_branch).to.equal(DEFAULT_BRANCH)
-        
+
       describe 'fetch organization', () ->
         it 'should be able to fetch organization info', (done) ->
 
