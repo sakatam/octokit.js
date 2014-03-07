@@ -508,13 +508,14 @@ For more details see jQuery's [deferred.progress documentation](http://api.jquer
 `octokit.js` has the following dependencies:
 
 - Underscore
-- Base64 (for basic auth or binary files). You can leave this if you are not using basic auth or binary files.
+- Base64 (optional). Only needed if you support older browsers.
+- jQuery or [zepto/ajax](https://github.com/madrobby/zepto/blob/master/src/ajax.js). This is a bit overkill and really should use `XMLHTTPRequest`
 
 If you are not using NodeJS or requireJS include these before `octokit.js`:
 
 ```
 <script src="lib/underscore-min.js">
-<script src="lib/base64.js">
+<script src="lib/base64.js">         <!-- only needed for older browsers -->
 ```
 
 ## Change Log
