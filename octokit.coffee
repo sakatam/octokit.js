@@ -618,6 +618,16 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
             .promise()
 
 
+          # Remove a file from the tree
+          # -------
+          @removeFile = (path, message, sha, branch) ->
+            params =
+              message: message
+              sha: sha
+              branch: branch
+            _request 'DELETE', "#{_repoPath}/contents/#{path}", params, null
+
+
           # Retrieve the tree a commit points to
           # -------
           # Optionally set recursive to true
@@ -818,26 +828,17 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
 
           # Remove a file from the tree
           # -------
-          @remove = (path, message="Removed #{path}") ->
+          # Optionally provide the sha of the file so it is not accidentally
+          # deleted if the repo has changed in the meantime.
+          @remove = (path, message="Removed #{path}", sha=null) ->
             _getRef()
             .then (branch) =>
-              _git._updateTree(branch)
-              .then (latestCommit) =>
-                _git.getTree(latestCommit, {recursive:true})
-                .then (tree) =>
-                  newTree = _.reject(tree, (ref) -> # Update Tree
-                    ref.path is path
-                  )
-                  _.each newTree, (ref) ->
-                    delete ref.sha  if ref.type is 'tree'
-
-                  _git.postTree(newTree)
-                  .then (rootTree) =>
-                    _git.commit(latestCommit, rootTree, message)
-                    .then (commit) =>
-                      _git.updateHead(branch, commit)
-                      .then (res) =>
-                        return res # Finally, return the result
+              if sha
+                _git.removeFile(path, message, sha, branch)
+              else
+                _git.getSha(branch, path)
+                .then (sha) =>
+                  _git.removeFile(path, message, sha, branch)
 
             # Return the promise
             .promise()
@@ -1329,9 +1330,9 @@ if exports?
   jQuery.ajax = najax
   # Encode using native Base64
   encode = (str) ->
-    buffer = new Buffer str, 'binary'
-    buffer.toString 'base64'
-  Octokit = makeOctokit _, jQuery, encode, 'octokit' # `User-Agent` (for nodejs)
+    buffer = new Buffer(str, 'binary')
+    return buffer.toString('base64')
+  Octokit = makeOctokit(_, jQuery, encode, 'octokit') # `User-Agent` (for nodejs)
   exports.new = (options) -> new Octokit(options)
 
 # If requirejs is detected then define this module
@@ -1342,18 +1343,18 @@ else if @define?
     # Otherwise, try to use the javascript Base64 code.
     if @btoa
       @define moduleName, ['underscore', 'jquery'], (_, jQuery) ->
-        return makeOctokit _, jQuery, @btoa
+        return makeOctokit(_, jQuery, @btoa)
     else
       @define moduleName, ['underscore', 'jquery', 'base64'], (_, jQuery, Base64) ->
-        return makeOctokit _, jQuery, Base64.encode
+        return makeOctokit(_, jQuery, Base64.encode)
 
 # If a global jQuery and underscore is loaded then use it
 else if @_ and @jQuery and (@btoa or @Base64)
   # Use the `btoa` function if it is defined (Webkit/Mozilla) and fail back to
   # `Base64.encode` otherwise (IE)
   encode = @btoa or @Base64.encode
-  Octokit = makeOctokit @_, @jQuery, encode
-  # Assign to `Octokit` and `Github` global for backwards compatibility
+  Octokit = makeOctokit(@_, @jQuery, encode)
+  # Assign to a global `Octokit`
   @Octokit = Octokit
   @Github = Octokit
 
@@ -1361,9 +1362,9 @@ else if @_ and @jQuery and (@btoa or @Base64)
 # Otherwise, throw an error
 else
   err = (msg) ->
-    console?.error? msg
-    throw msg
+    console?.error?(msg)
+    throw new Error(msg)
 
   err 'Underscore not included' if not @_
   err 'jQuery not included' if not @jQuery
-  err 'Base64 not included' if not @Base64 and not @btoa
+  err 'Base64 not included' if not (@btoa or @Base64)
