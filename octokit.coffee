@@ -1188,6 +1188,11 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
           @getLanguages = ->
             _request 'GET', "#{@repoPath}/languages", null
 
+          # List all releases
+          # -------
+          @getReleases = () ->
+            _request 'GET', "#{@repoPath}/releases", null
+
 
       # Gist API
       # -------
