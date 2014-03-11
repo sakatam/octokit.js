@@ -247,6 +247,12 @@ makeTests = (_, assert, expect, btoa, Octokit) ->
           helper1 done, STATE[GH].getOrg(ORG_NAME).getInfo(), (info) ->
             expect(info.login).to.equal(ORG_NAME)
 
+      describe 'Releases', () ->
+        it 'should be able to get releases', (done) ->
+
+          helper1 done, STATE[REPO].getReleases(), (releases) ->
+            expect(releases).to.have.length(0)
+
       describe 'Events:', () ->
         itIsOk(REPO, 'getEvents')
         itIsOk(REPO, 'getIssueEvents')

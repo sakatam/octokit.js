@@ -1055,6 +1055,9 @@
             this.getLanguages = function() {
               return _request('GET', "" + this.repoPath + "/languages", null);
             };
+            this.getReleases = function() {
+              return _request('GET', "" + this.repoPath + "/releases", null);
+            };
           }
 
           return Repository;
