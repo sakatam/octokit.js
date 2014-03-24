@@ -1,5 +1,5 @@
 (function() {
-  var Octokit, encode, err, jQuery, makeOctokit, moduleName, najax, underscoreShim, _, _i, _len, _ref,
+  var Octokit, encode, err, jQuery, makeOctokit, moduleName, najax, underscoreShim, _i, _len, _ref,
     _this = this,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -1205,11 +1205,12 @@
       return obj.filter(fn);
     },
     extend: function(obj, template) {
-      var i;
+      var i, _results;
+      _results = [];
       for (i in template) {
-        obj[i] = template[i];
+        _results.push(obj[i] = template[i]);
       }
-      return obj;
+      return _results;
     },
     toArray: function(obj) {
       return Array.prototype.slice.call(obj);
@@ -1217,7 +1218,6 @@
   };
 
   if (typeof exports !== "undefined" && exports !== null) {
-    _ = require('underscore');
     jQuery = require('jquery-deferred');
     najax = require('najax');
     jQuery.ajax = najax;
@@ -1226,7 +1226,8 @@
       buffer = new Buffer(str, 'binary');
       return buffer.toString('base64');
     };
-    Octokit = makeOctokit(_, jQuery, encode, 'octokit');
+    console.log("DALSJFSDKJHFSKDJFH");
+    Octokit = makeOctokit(underscoreShim, jQuery, encode, 'octokit');
     exports["new"] = function(options) {
       return new Octokit(options);
     };

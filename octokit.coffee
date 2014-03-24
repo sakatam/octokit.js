@@ -1354,7 +1354,6 @@ underscoreShim =
 
 # If using this as a nodejs module use `jquery-deferred` and `najax` to make a jQuery object
 if exports?
-  _ =       require 'underscore'
   jQuery =  require 'jquery-deferred'
   najax =   require 'najax'
   jQuery.ajax = najax
@@ -1362,7 +1361,7 @@ if exports?
   encode = (str) ->
     buffer = new Buffer(str, 'binary')
     return buffer.toString('base64')
-  Octokit = makeOctokit(_, jQuery, encode, 'octokit') # `User-Agent` (for nodejs)
+  Octokit = makeOctokit(underscoreShim, jQuery, encode, 'octokit') # `User-Agent` (for nodejs)
   exports.new = (options) -> new Octokit(options)
 
 # If requirejs is detected then define this module
