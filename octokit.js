@@ -1226,7 +1226,6 @@
       buffer = new Buffer(str, 'binary');
       return buffer.toString('base64');
     };
-    console.log("DALSJFSDKJHFSKDJFH");
     Octokit = makeOctokit(underscoreShim, jQuery, encode, 'octokit');
     exports["new"] = function(options) {
       return new Octokit(options);
