@@ -1322,11 +1322,42 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
 # -------
 # Depending on the context this file is called, register it appropriately
 
+# Underscore shim: no need for 14kb of underscore.min for what the browser can do these days.
+underscoreShim =
+  isEmpty: (obj) ->
+    return Object.keys(obj).length is 0
+  isArray: (obj) ->
+    return obj instanceof Array
+  defaults: (obj, props) ->
+    Object.keys(props).forEach (v) ->
+      obj[v] = obj[v] or props[v]
+    return obj
+  each: (obj, fn) ->
+    obj.forEach(fn)
+  pairs: (obj) ->
+    arr = []
+    Object.keys(obj).forEach (key) ->
+      arr.push [key, obj[key]]
+    return arr
+  map: (obj, fn) ->
+    return obj.map(fn)
+  last: (obj) ->
+    return obj[obj.length - 1]
+  select: (obj, fn) ->
+    return obj.filter(fn)
+  extend: (obj, template) ->
+    # really, though? This should never be necessary
+    for i of template
+      obj[i] = template[i]
+    return obj
+  toArray: (obj) ->
+    Array::slice.call(obj)
+
 # If using this as a nodejs module use `jquery-deferred` and `najax` to make a jQuery object
 if exports?
-  _ = require 'underscore'
-  jQuery = require 'jquery-deferred'
-  najax = require 'najax'
+  _ =       require 'underscore'
+  jQuery =  require 'jquery-deferred'
+  najax =   require 'najax'
   jQuery.ajax = najax
   # Encode using native Base64
   encode = (str) ->
@@ -1342,18 +1373,18 @@ else if @define?
     # If the browser has the native Base64 encode function `btoa` use it.
     # Otherwise, try to use the javascript Base64 code.
     if @btoa
-      @define moduleName, ['underscore', 'jquery'], (_, jQuery) ->
-        return makeOctokit(_, jQuery, @btoa)
+      @define moduleName, ['jquery'], (jQuery) ->
+        return makeOctokit(underscoreShim, jQuery, @btoa)
     else
-      @define moduleName, ['underscore', 'jquery', 'base64'], (_, jQuery, Base64) ->
-        return makeOctokit(_, jQuery, Base64.encode)
+      @define moduleName, ['jquery', 'base64'], (jQuery, Base64) ->
+        return makeOctokit(underscoreShim, jQuery, Base64.encode)
 
 # If a global jQuery and underscore is loaded then use it
-else if @_ and @jQuery and (@btoa or @Base64)
+else if @jQuery and (@btoa or @Base64)
   # Use the `btoa` function if it is defined (Webkit/Mozilla) and fail back to
   # `Base64.encode` otherwise (IE)
   encode = @btoa or @Base64.encode
-  Octokit = makeOctokit(@_, @jQuery, encode)
+  Octokit = makeOctokit(underscoreShim, @jQuery, encode)
   # Assign to a global `Octokit`
   @Octokit = Octokit
   @Github = Octokit
@@ -1365,6 +1396,5 @@ else
     console?.error?(msg)
     throw new Error(msg)
 
-  err 'Underscore not included' if not @_
   err 'jQuery not included' if not @jQuery
   err 'Base64 not included' if not (@btoa or @Base64)

@@ -1171,8 +1171,52 @@
     return Octokit;
   };
 
+  _ = {
+    isEmpty: function(obj) {
+      return Object.keys(obj).length === 0;
+    },
+    isArray: function(obj) {
+      return obj instanceof Array;
+    },
+    defaults: function(obj, props) {
+      Object.keys(props).forEach(function(v) {
+        return obj[v] = obj[v] || props[v];
+      });
+      return obj;
+    },
+    each: function(obj, fn) {
+      return obj.forEach(fn);
+    },
+    pairs: function(obj) {
+      var arr;
+      arr = [];
+      Object.keys(obj).forEach(function(key) {
+        return arr.push([key, obj[key]]);
+      });
+      return arr;
+    },
+    map: function(obj, fn) {
+      return obj.map(fn);
+    },
+    last: function(obj) {
+      return obj[obj.length - 1];
+    },
+    select: function(obj, fn) {
+      return obj.filter(fn);
+    },
+    extend: function(obj, template) {
+      var i;
+      for (i in template) {
+        obj[i] = template[i];
+      }
+      return obj;
+    },
+    toArray: function(obj) {
+      return Array.prototype.slice.call(obj);
+    }
+  };
+
   if (typeof exports !== "undefined" && exports !== null) {
-    _ = require('underscore');
     jQuery = require('jquery-deferred');
     najax = require('najax');
     jQuery.ajax = najax;
@@ -1190,18 +1234,18 @@
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       moduleName = _ref[_i];
       if (this.btoa) {
-        this.define(moduleName, ['underscore', 'jquery'], function(_, jQuery) {
+        this.define(moduleName, ['jquery'], function(jQuery) {
           return makeOctokit(_, jQuery, this.btoa);
         });
       } else {
-        this.define(moduleName, ['underscore', 'jquery', 'base64'], function(_, jQuery, Base64) {
+        this.define(moduleName, ['jquery', 'base64'], function(jQuery, Base64) {
           return makeOctokit(_, jQuery, Base64.encode);
         });
       }
     }
-  } else if (this._ && this.jQuery && (this.btoa || this.Base64)) {
+  } else if (this.jQuery && (this.btoa || this.Base64)) {
     encode = this.btoa || this.Base64.encode;
-    Octokit = makeOctokit(this._, this.jQuery, encode);
+    Octokit = makeOctokit(_, this.jQuery, encode);
     this.Octokit = Octokit;
     this.Github = Octokit;
   } else {
@@ -1213,9 +1257,6 @@
       }
       throw new Error(msg);
     };
-    if (!this._) {
-      err('Underscore not included');
-    }
     if (!this.jQuery) {
       err('jQuery not included');
     }
