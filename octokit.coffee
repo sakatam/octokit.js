@@ -1325,9 +1325,9 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
 # Underscore shim: no need for 14kb of underscore.min for what the browser can do these days.
 underscoreShim =
   isEmpty: (obj) ->
-    return Object.keys(obj).length is 0
+    Object.keys(obj).length is 0
   isArray: (obj) ->
-    return obj instanceof Array
+    obj instanceof Array
   defaults: (obj, props) ->
     Object.keys(props).forEach (v) ->
       obj[v] = obj[v] or props[v]
@@ -1340,16 +1340,15 @@ underscoreShim =
       arr.push [key, obj[key]]
     return arr
   map: (obj, fn) ->
-    return obj.map(fn)
+    obj.map(fn)
   last: (obj) ->
-    return obj[obj.length - 1]
+    obj[obj.length - 1]
   select: (obj, fn) ->
-    return obj.filter(fn)
+    obj.filter(fn)
   extend: (obj, template) ->
     # really, though? This should never be necessary
     for i of template
       obj[i] = template[i]
-    return obj
   toArray: (obj) ->
     Array::slice.call(obj)
 
