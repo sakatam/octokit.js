@@ -1180,18 +1180,19 @@
     },
     defaults: function(obj, props) {
       Object.keys(props).forEach(function(v) {
-        return obj[v] = obj[v] || props[v];
+        obj[v] = obj[v] || props[v];
       });
       return obj;
     },
     each: function(obj, fn) {
-      return obj.forEach(fn);
+      obj.forEach(fn);
+      return obj;
     },
     pairs: function(obj) {
       var arr;
       arr = [];
       Object.keys(obj).forEach(function(key) {
-        return arr.push([key, obj[key]]);
+        arr.push([key, obj[key]]);
       });
       return arr;
     },
@@ -1205,12 +1206,11 @@
       return obj.filter(fn);
     },
     extend: function(obj, template) {
-      var i, _results;
-      _results = [];
+      var i;
       for (i in template) {
-        _results.push(obj[i] = template[i]);
+        obj[i] = template[i];
       }
-      return _results;
+      return obj;
     },
     toArray: function(obj) {
       return Array.prototype.slice.call(obj);
