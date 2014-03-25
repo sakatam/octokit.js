@@ -1076,11 +1076,9 @@
             this.path = "" + this.repo.repoPath + "/pulls/" + this.id;
             this.issue_path = "" + this.repo.repoPath + "/issues/" + this.id;
             this.getInfo = function() {
-              console.log("" + this.issue_path + "/comments");
               return _request('GET', this.path, null);
             };
             this.getIssueComments = function() {
-              console.log("" + this.issue_path + "/comments");
               return _request('GET', "" + this.issue_path + "/comments", null);
             };
             this.createIssueComment = function(body) {
