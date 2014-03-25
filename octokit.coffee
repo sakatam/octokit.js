@@ -1303,6 +1303,9 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
       @getOrg = (name) ->
         new Organization(name)
 
+      @getTeam = (id) ->
+        new Team(id)
+
       # API for viewing info for arbitrary users or the current user
       # if no arguments are provided.
       @getUser = (login=null) ->

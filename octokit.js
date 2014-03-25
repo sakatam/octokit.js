@@ -1165,6 +1165,9 @@
         this.getOrg = function(name) {
           return new Organization(name);
         };
+        this.getTeam = function(id) {
+          return new Team(id);
+        };
         this.getUser = function(login) {
           if (login == null) {
             login = null;
