@@ -1203,10 +1203,8 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
           @path = "#{@repo.repoPath}/pulls/#{@id}"
           @issue_path = "#{@repo.repoPath}/issues/#{@id}"
           @getInfo = ->
-            console.log "#{@issue_path}/comments"
             _request 'GET', @path, null
           @getIssueComments = ->
-            console.log "#{@issue_path}/comments"
             _request 'GET', "#{@issue_path}/comments", null
           @createIssueComment = (body) ->
             _request 'POST', "#{@issue_path}/comments", body: body
