@@ -1029,6 +1029,11 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
           @createPullRequest = (options) ->
             _request 'POST', "#{@repoPath}/pulls", options
 
+          @getPullRequests = (options) ->
+            _request 'GET', "#{@repoPath}/pulls", options
+
+          @getPullRequest = (id) ->
+            new PullRequest @, id
 
           # Get recent commits to the repository
           # --------
@@ -1192,6 +1197,19 @@ makeOctokit = (_, jQuery, base64encode, userAgent) =>
           # -------
           @getReleases = () ->
             _request 'GET', "#{@repoPath}/releases", null
+
+      class PullRequest
+        constructor: (@repo, @id) ->
+          @path = "#{@repo.repoPath}/pulls/#{@id}"
+          @issue_path = "#{@repo.repoPath}/issues/#{@id}"
+          @getInfo = ->
+            console.log "#{@issue_path}/comments"
+            _request 'GET', @path, null
+          @getIssueComments = ->
+            console.log "#{@issue_path}/comments"
+            _request 'GET', "#{@issue_path}/comments", null
+          @createIssueComment = (body) ->
+            _request 'POST', "#{@issue_path}/comments", body: body
 
 
       # Gist API

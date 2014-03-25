@@ -7,19 +7,15 @@
     "prepublish": "bower install",
     "test": "grunt test --verbose",
     "dist": "grunt dist --verbose",
-    "update": "bower update",
-    "blanket": {
-      "pattern": [
-        "octokit.js"
-      ]
-    }
+    "update": "bower update"
   },
   "dependencies": {
     "grunt": "~0.4.2",
     "bower": "~1.0",
     "underscore": ">=1.4.2",
     "jquery-deferred": ">=0.3.0",
-    "najax": "git://github.com/philschatz/najax.git"
+    "najax": "git://github.com/philschatz/najax.git",
+    "jquery": "~2.1.0"
   },
   "devDependencies": {
     "coffee-script": "~1.6.3",

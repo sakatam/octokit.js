@@ -8,7 +8,7 @@
     var Octokit;
     Octokit = (function() {
       function Octokit(clientOptions) {
-        var AuthenticatedUser, Branch, ETagResponse, Gist, GitRepo, Organization, Repository, Team, User, clearCache, notifyEnd, notifyStart, toQueryString, _cachedETags, _client, _listeners, _request;
+        var AuthenticatedUser, Branch, ETagResponse, Gist, GitRepo, Organization, PullRequest, Repository, Team, User, clearCache, notifyEnd, notifyStart, toQueryString, _cachedETags, _client, _listeners, _request;
         if (clientOptions == null) {
           clientOptions = {};
         }
@@ -915,6 +915,12 @@
             this.createPullRequest = function(options) {
               return _request('POST', "" + this.repoPath + "/pulls", options);
             };
+            this.getPullRequests = function(options) {
+              return _request('GET', "" + this.repoPath + "/pulls", options);
+            };
+            this.getPullRequest = function(id) {
+              return new PullRequest(this, id);
+            };
             this.getCommits = function(options) {
               return this.git.getCommits(options);
             };
@@ -1061,6 +1067,30 @@
           }
 
           return Repository;
+
+        })();
+        PullRequest = (function() {
+          function PullRequest(repo, id) {
+            this.repo = repo;
+            this.id = id;
+            this.path = "" + this.repo.repoPath + "/pulls/" + this.id;
+            this.issue_path = "" + this.repo.repoPath + "/issues/" + this.id;
+            this.getInfo = function() {
+              console.log("" + this.issue_path + "/comments");
+              return _request('GET', this.path, null);
+            };
+            this.getIssueComments = function() {
+              console.log("" + this.issue_path + "/comments");
+              return _request('GET', "" + this.issue_path + "/comments", null);
+            };
+            this.createIssueComment = function(body) {
+              return _request('POST', "" + this.issue_path + "/comments", {
+                body: body
+              });
+            };
+          }
+
+          return PullRequest;
 
         })();
         Gist = (function() {
